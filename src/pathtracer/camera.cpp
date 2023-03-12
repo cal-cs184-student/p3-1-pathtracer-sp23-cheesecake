@@ -199,8 +199,9 @@ Ray Camera::generate_ray(double x, double y) const {
     double bottomy = -tan(radians(vFov) * 0.5);
     double topy = tan(radians(vFov) * 0.5);
     Vector3D d = Vector3D(leftx + x * (rightx - leftx), bottomy + y * (topy - bottomy), (double) - 1.0);
-
-    Ray r = Ray(pos, d);
+    Vector3D d_world = c2w * d;
+    d_world.normalize();
+    Ray r = Ray(pos, d_world);
 
     r.min_t = nClip;
     r.max_t = fClip;
