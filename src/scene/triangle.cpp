@@ -65,6 +65,8 @@ bool Triangle::has_intersection(const Ray &r) const {
     C = cross(e3, ep);
     if (dot(N, C) < 0) return false;
 
+    r.max_t = t;
+
   return true;
 
 }
@@ -117,6 +119,8 @@ bool Triangle::intersect(const Ray &r, Intersection *isect) const {
     C = cross(e3, ep);
     float beta = dot(N, C) / normalize;
     if (beta < 0) return false;
+
+    r.max_t = t;
 
     isect->t = t;
     isect->n = alpha * n1 + beta * n2 + (1 - alpha - beta) * n3;
