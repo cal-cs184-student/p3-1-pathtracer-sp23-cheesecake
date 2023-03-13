@@ -48,7 +48,15 @@ void BVHAccel::drawOutline(BVHNode *node, const Color &c, float alpha) const {
   }
 }
 
-
+bool compareX(Primitive* p1, Primitive* p2) {
+    return (p1)->get_bbox().centroid().x < (p2)->get_bbox().centroid().x;
+}
+bool compareY(Primitive* p1, Primitive* p2) {
+    return (p1)->get_bbox().centroid().y < (p2)->get_bbox().centroid().y;
+}
+bool compareZ(Primitive* p1, Primitive* p2) {
+    return (p1)->get_bbox().centroid().z < (p2)->get_bbox().centroid().z;
+}
 
 BVHNode *BVHAccel::construct_bvh(std::vector<Primitive *>::iterator start,
                                  std::vector<Primitive *>::iterator end,
@@ -81,69 +89,56 @@ BVHNode *BVHAccel::construct_bvh(std::vector<Primitive *>::iterator start,
       return node;
   }
 
-  // Calculate the longest dimension; that is the axis to split
-  int dim;
-  Vector3D e = bbox.extent;
-  if (e.x > e.y && e.x > e.z) {
-      dim = 0;
-  } else if (e.y > e.x && e.y > e.z) {
-      dim = 1;
-  } else {
-      dim = 2;
-  }
-
   // Compute the split point along this axis
-  Vector3D split = Vector3D(0,0,0);
+  Vector3D split = Vector3D(0, 0, 0);
   for (auto p = start; p != end; p++) {
       split += (*p)->get_bbox().centroid();
   }
   split /= count;
 
+  // Calculate the longest dimension; that is the axis to split, and sort accordingly
+  int dim;
+  Vector3D e = bbox.extent;
+  if (e.x > e.y && e.x > e.z) {
+      dim = 0;
+      sort(start, end, compareX);
+  } else if (e.y > e.x && e.y > e.z) {
+      dim = 1;
+      sort(start, end, compareY);
+  } else {
+      dim = 2;
+      sort(start, end, compareZ);
+  }
 
-  // Divide all primitives into a "left" and "right" collection based on the 
-  // centroid of their bounding boxes
-  // TODO: std::partition might be faster
-  vector<Primitive*> left, right;
-
+  // Find the split point
+  vector<Primitive*>::iterator bound = start;
   for (auto p = start; p != end; p++) {
-      Vector3D c = (*p)->get_bbox().centroid();
-      double c_value, split_value;
       if (dim == 0) {
-          c_value = c.x;
-          split_value = split.x;
+          if ((*p)->get_bbox().centroid().x > split.x) {
+              bound = p;
+              break;
+          }
       }
       else if (dim == 1) {
-          c_value = c.y;
-          split_value = split.y;
+          if ((*p)->get_bbox().centroid().y > split.y) {
+              bound = p;
+              break;
+          }
       }
       else {
-          c_value = c.z;
-          split_value = split.z;
+          if ((*p)->get_bbox().centroid().z > split.z) {
+              bound = p;
+              break;
+          }
       }
-      if (c_value < split_value) {
-          left.push_back(*p);
-      }
-      else {
-          right.push_back(*p);
-      }
+      
   }
 
-  // If all primitives lie on one side of the split point, we move the split point 
-  // so that both sides will have at least one item
-  // TODO: Need to sort left and right
-  if (left.empty()) {
-      left.push_back(*(right.end()));
-      right.pop_back();
-  }
-  else if (right.empty()) {
-      right.push_back(*(left.end()));
-      left.pop_back();
-  }
 
   // Set the current node's left and right children by 
   // recursively calling BVHAccel:construct_bvh(...)
-  node->l = construct_bvh(left.begin(), left.end(), max_leaf_size);
-  node->r = construct_bvh(right.begin(), right.end(), max_leaf_size);
+  node->l = construct_bvh(start, bound, max_leaf_size);
+  node->r = construct_bvh(bound, end, max_leaf_size);
 
   return node;
 
