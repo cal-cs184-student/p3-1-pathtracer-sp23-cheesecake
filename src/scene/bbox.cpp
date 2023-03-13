@@ -22,14 +22,12 @@ bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 	double tz1 = (min.z - r.o.z) / r.d.z;
 	double tz2 = (max.z - r.o.z) / r.d.z;
 
-	Vector3D tmin = Vector3D(std::min(tx1, tx2), std::min(ty1, ty2), std::min(tz1, tz2));
-	Vector3D tmax = Vector3D(std::max(tx1, tx2), std::max(ty1, ty2), std::max(tz1, tz2));
-
 	// Max of min and min of max
-	double max_of_min = std::max(tmin.x, std::max(tmin.y, tmin.z));
-	double min_of_max = std::min(tmax.x, std::min(tmax.y, tmax.z));
+	double max_of_min = std::max(std::min(tx1, tx2), std::max(std::min(ty1, ty2), std::min(tz1, tz2)));
+	double min_of_max = std::min(std::max(tx1, tx2), std::min(std::max(ty1, ty2), std::max(tz1, tz2)));
 
 	if (max_of_min > min_of_max) return false;
+	if (max_of_min < t0 || min_of_max > t1) return false;
 
 	// Update t0 and t1
 	t0 = max_of_min;
