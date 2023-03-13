@@ -117,7 +117,6 @@ Vector3D PathTracer::one_bounce_radiance(const Ray &r,
   // depending on `direct_hemisphere_sample`
 
 
-
   return Vector3D(1.0);
 
 
@@ -156,15 +155,13 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
   //
   // REMOVE THIS LINE when you are ready to begin Part 3.
   
-//  if (!bvh->intersect(r, &isect))
-//    return envLight ? envLight->sample_dir(r) : L_out;
-//
-//
-//  L_out = (isect.t == INF_D) ? debug_shading(r.d) : normal_shading(isect.n);
-
-  // TODO (Part 3): Return the direct illumination.
   if (!bvh->intersect(r, &isect))
-      return zero_bounce_radiance(r, isect);
+    return envLight ? envLight->sample_dir(r) : L_out;
+
+
+//  L_out = (isect.t == INF_D) ? debug_shading(r.d) : normal_shading(isect.n);
+L_out = (isect.t == INF_D) ? debug_shading(r.d) : zero_bounce_radiance(r, isect);
+  // TODO (Part 3): Return the direct illumination.
 
   // TODO (Part 4): Accumulate the "direct" and "indirect"
   // parts of global illumination into L_out rather than just direct
