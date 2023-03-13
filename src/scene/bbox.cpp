@@ -22,17 +22,26 @@ bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 	double tz1 = (min.z - r.o.z) / r.d.z;
 	double tz2 = (max.z - r.o.z) / r.d.z;
 
-	// Max of min and min of max
-	double max_of_min = std::max(std::min(tx1, tx2), std::max(std::min(ty1, ty2), std::min(tz1, tz2)));
-	double min_of_max = std::min(std::max(tx1, tx2), std::min(std::max(ty1, ty2), std::max(tz1, tz2)));
+	// Mins and maxes
+	double txmin = std::min(tx1, tx2);
+	double txmax = std::max(tx1, tx2);
+	double tymin = std::min(ty1, ty2);
+	double tymax = std::max(ty1, ty2);
+	double tzmin = std::min(tz1, tz2);
+	double tzmax = std::max(tz1, tz2);
 
-	if (max_of_min > min_of_max) return false;
-	if (max_of_min < t0 || min_of_max > t1) return false;
-	//	if (max_of_min < r.min_t || min_of_max < r.min_t || max_of_min > r.max_t || min_of_max > r.max_t) return false;
+	// Max of min and min of max
+	double tmin = std::max(txmin, std::max(tymin, tzmin));
+	double tmax = std::min(txmax, std::min(tymax, tzmax));
+
+	if (tmin > tmax) return false;
+	if (tmin < t0 || tmax > t1) return false;
+	if (tmin < 0 || tmax < 0) return false;
+	if (tmin < r.min_t || tmax < r.min_t || tmin > r.max_t || tmax > r.max_t) return false;
 
 	// Update t0 and t1
-	t0 = max_of_min;
-	t1 = min_of_max;
+	t0 = tmin;
+	t1 = tmax;
 	return true;
 
 }
