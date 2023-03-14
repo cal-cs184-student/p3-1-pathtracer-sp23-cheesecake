@@ -28,7 +28,6 @@ bool Triangle::has_intersection(const Ray &r) const {
   // function records the "intersection" while this function only tests whether
   // there is a intersection.
 
-    float eps = 0.00001;
 
     // Definitions
     Vector3D e1 = p2 - p1;
@@ -38,7 +37,7 @@ bool Triangle::has_intersection(const Ray &r) const {
     // Check for parallelism
     Vector3D h = cross(r.d, e2);
     double a = dot(h, e1);
-    if (abs(a) < eps) {
+    if (a == 0) {
         return false;
     }
 
@@ -69,8 +68,6 @@ bool Triangle::intersect(const Ray &r, Intersection *isect) const {
   // place, the Intersection data should be updated accordingly
 
 
-    float eps = 0.00001;
-
     // Definitions
     Vector3D e1 = p2 - p1;
     Vector3D e2 = p3 - p1;
@@ -79,7 +76,7 @@ bool Triangle::intersect(const Ray &r, Intersection *isect) const {
     // Check for parallelism
     Vector3D h = cross(r.d, e2);
     double a = dot(h, e1);
-    if (abs(a) < eps) {
+    if (a == 0) {
         return false;
     }
 
