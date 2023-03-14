@@ -468,7 +468,16 @@ Pick one scene and render it with at least 2048 samples per pixel. Show a good s
   Explain adaptive sampling. Walk through your implementation of the adaptive sampling.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    To decrease noise, we increase the number of samples per pixel. However, some pixels may converge faster,
+    while other pixels converge slower. Adaptive sampling is a sampling method that terminates
+    generating more samples when the pixel has converged. This allows us to concentrate
+    the samples in parts of the image that converge slower (are more difficult).
+    <br />
+    My implementation of adaptive sampling calculates I, the pixel's convergence, every samplesPerBatch samples. 
+    At each sample, we keep track of the sum of all illuminances of all past samples (s1), as well as the sum of all illuminances squared of all past samples (s2).
+    Every samplesPerBatch, we calculate the mean and variance of all samples so far (n samples), with mean = s1/n and variance = (1/n-1)*(s2 - (s1**2 / n))
+    Then we calculate convergence as 1.96*sqrt(variance)/sqrt(n). If the value of convergence is less than maxTolerance*mean, then the pixel
+    has converged and we stop tracing more rays for that pixel. 
 </p>
 <br>
 
