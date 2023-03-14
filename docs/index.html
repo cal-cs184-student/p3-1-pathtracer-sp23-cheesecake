@@ -154,7 +154,19 @@ Compare rendering times on a few scenes with moderately complex geometries with 
   Walk through your BVH construction algorithm. Explain the heuristic you chose for picking the splitting point.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    First, we compute a bounding box of the list of primitives and create a new BVHNode with that bounding box.
+    We figure out whether or not that BVHNode is a leaf node by checking if there is no more than max_leaf_size primitives
+    in the bounding box. If it is a leaf node, we set the node's start and end iterators to the iterators of the list
+    of primitives.
+    <br />
+    If it isn't a leaf node, we divide the primitives into a "left" and a "right" group. First, we pick the longest axis (either x, y, or z),
+    since we want to split along the widest axis. Then, we sort the list of primitives by their position along that axis.
+    Then, we compute the average of all centroids of all the primitives. The split point we use will be point
+    in which the average lies along the longest axis. We find the first primitive that lies beyond the split point, and
+    set a pointer named bound pointing to that primitive
+    We then recursively call BVHAccel:construct_bvh() on the left side of the split point (e.g. from "start" to "bound")
+    and the right side of the split point (e.g. from "bound" to "end"). We initialize bound to be start, so even if all primitives lie
+    on one side of the split point, there will be no segfault.
 </p>
 
 <h3>
@@ -165,22 +177,22 @@ Compare rendering times on a few scenes with moderately complex geometries with 
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example1.dae</figcaption>
+        <img src="images/part2cbbunny.png" align="middle" width="400px"/>
+        <figcaption>CBBunny.dae</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example2.dae</figcaption>
+        <img src="images/part2cblucy.png" align="middle" width="400px"/>
+        <figcaption>CBlucy.dae</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example3.dae</figcaption>
+        <img src="images/part2blob.png" align="middle" width="400px"/>
+        <figcaption>blob.dae</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example4.dae</figcaption>
+        <img src="images/part2dragon.png" align="middle" width="400px"/>
+        <figcaption>dragon.dae</figcaption>
       </td>
     </tr>
   </table>
@@ -191,7 +203,12 @@ Compare rendering times on a few scenes with moderately complex geometries with 
   Compare rendering times on a few scenes with moderately complex geometries with and without BVH acceleration. Present your results in a one-paragraph analysis.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    For the cow, rendering time with BVH acceleration takes 0.0789s, averaging 2.672023 intersection tests per ray, and 5.2658 million rays per second.
+    Rendering time without BHV acceleration takes 43.2549, averaging 1367.322556 intersection tests per ray, and 0.0111 million rays per second.
+    For the bunny, rendering time with BVH acceleration is 0.0845s, averaging 2.405373 intersection tests per ray, and 4.9741 million rays per second.
+    Rendering time without BHV acceleration takes 209.2882s, averaging 6383.757855 intersection tests per ray, and 0.0023 million million rays per second.
+    From this, we can see that BVH acceleration speeds up rendering times by orders of magnitude by reducing the number of intersection tests we 
+    have to compute per ray. That way, we can render more rays per second, speeding up the rendering time.
 </p>
 <br>
 
