@@ -41,7 +41,7 @@
 
 <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
 <h1 align="middle">Project 3-1: Path Tracer</h1>
-<h2 align="middle">YOUR NAME(S)</h2>
+<h2 align="middle">Chi-Feng Wang, (CS184-ACB), Maggie Yi (CS184-ACF)</h2>
 
 <!-- Add Website URL -->
 <h2 align="middle">Website URL: <a href="TODO">TODO</a></h2>
@@ -59,32 +59,9 @@
   </table>
 </div>
 
-<p>All of the text in your write-up should be <em>in your own words</em>. If you need to add additional HTML features to this document, you can search the <a href="http://www.w3schools.com/">http://www.w3schools.com/</a> website for instructions. To edit the HTML, you can just copy and paste existing chunks and fill in the text and image file names appropriately.</p>
-<o>The website writeup is intended to be a self-contained walkthrough of the assignment: we want this to be a piece of work which showcases your understanding of relevant concepts through both mesh images as well as written explanations about what you did to complete each part of the assignment. Try to be as clear and organized as possible when writing about your own output files or extensions to the assignment. We want to understand what you've achieved and how you've done it!</p> 
-<p>If you are well-versed in web development, feel free to ditch this template and make a better looking page.</p>
-
-
-<p>Here are a few problems students have encountered in the past. Test your website on the instructional machines early!</p>
-<ul>
-<li>Your main report page should be called index.html.</li>
-<li>Be sure to include and turn in all of the other files (such as images) that are linked in your report!</li>
-<li>Use only <em>relative</em> paths to files, such as <pre>"./images/image.jpg"</pre>
-Do <em>NOT</em> use absolute paths, such as <pre>"/Users/student/Desktop/image.jpg"</pre></li>
-<li>Pay close attention to your filename extensions. Remember that on UNIX systems (such as the instructional machines), capitalization matters. <pre>.png != .jpeg != .jpg != .JPG</pre></li>
-<li>Be sure to adjust the permissions on your files so that they are world readable. For more information on this please see this tutorial: <a href="http://www.grymoire.com/Unix/Permissions.html">http://www.grymoire.com/Unix/Permissions.html</a></li>
-<li>And again, test your website on the instructional machines early!</li>
-</ul>
-
-
-<p>Here is an example of how to include a simple formula:</p>
-<p align="middle"><pre align="middle">a^2 + b^2 = c^2</pre></p>
-<p>or, alternatively, you can include an SVG image of a LaTex formula.</p>
-
-<div>
-
 <h2 align="middle">Overview</h2>
 <p>
-    YOUR RESPONSE GOES HERE
+    For this project, we created a ray tracing rendering engine that can render DAE files.
 </p>
 <br>
 
@@ -97,7 +74,21 @@ Show images with normal shading for a few small .dae files. -->
   Walk through the ray generation and primitive intersection parts of the rendering pipeline.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    To generate a ray passing through the camera at point (x, y), we translate the image coordinates
+    to camera space, generate the ray in camera space, and transofrm it back into a ray in the world space.
+    We first calculate the (x, y) coordinates in the camera space, which we can do since we know the bottom
+    left and top right corner coordinates of the image in the camera space. The ray generated will have two
+    components: an origin and a direction. The origin is "pos", the camera position in world space, and the
+    direction is the the camera-to-world roation matrix multiplied by the (x, y) coordinates in the camera space.
+    <br />
+    Once a ray is generated, we update the color of each pixel in PathTracer::raytrace_pixel(), which generates
+    ns_aa random rays in the pixel and computes the average of all color values of the ray in the pixel.
+    <br />
+    We implemented two ray-primitive intersections in this task: ray-triangle intersection and ray-sphere 
+    intersection. For ray-sphere intersection, we used the equation from lecture, which calculates the
+    t-value of the intersection between the ray and sphere. There is an intersection if t lies within min_t and max_t
+    of the input ray. Every time there is an intersection, we update the max_t of the ray. The triangle intersection
+    algorithm we used will be explained below.
 </p>
 <br>
 
@@ -105,7 +96,21 @@ Show images with normal shading for a few small .dae files. -->
   Explain the triangle intersection algorithm you implemented in your own words.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    Originally, we used a more intuitive triangle intersection algorithm. We computed the normal of the triangle, and checked
+    whether the ray is parallel to the plane by taking the dot product of the ray's direction and the normal. If the ray is parallel
+    to the plane of the triangle, they cannot intersect. Then, we compute t, the value of the "length" of the ray when it
+    intersects the plane. If this value is outside of [ray.min_t, ray.max_t], then there is no intersection. If this value
+    is less than 0, there is no intersection. We then calculate the intersection point p in the triangle, and use
+    a similar method as Project 1 to test whether or not point p is inside the triangle. If yes, then we have an intersection.
+    <br />
+    However, we saw on Ed that other people were using a faster algorithm, known as the Moller-Trumbore intersection algorithm.
+    This algorithm is a fast method of calculating the intersection without needing to compute the plane equation, and provides
+    us with barycentric coordinates that we can use for interpolating the surface normal at the intersection point. Similar to
+    before, we first check if the ray is parallel to the triangle by calculating the dot product between the ray's direction and the
+    triangle plane normal. Then, the Moller-Trumbore intersection algorithm sets up a system of linear equations O-v1 = -tD + u(v2-v1) + v(v3-v1)
+    where v1, v2, and v3 are the vertices of the triangle, D is the ray's direction vector, O is tha ray's origin, and t, u, v are the variables we
+    solve for. If there is a solution where u and v are both positive and sum up to less than 1, and where t is within [ray.min_t, ray.max_t],
+    then there is a valid intersection.
 </p>
 <br>
 
@@ -117,22 +122,22 @@ Show images with normal shading for a few small .dae files. -->
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example1.dae</figcaption>
+        <img src="images/part1empty.png" align="middle" width="400px"/>
+        <figcaption>sky/CBempty.dae</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example2.dae</figcaption>
+        <img src="images/part1cube.png" align="middle" width="400px"/>
+        <figcaption>simple/cube.dae</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example3.dae</figcaption>
+        <img src="images/part1spheres.png" align="middle" width="400px"/>
+        <figcaption>sky/CBspheres.dae</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example4.dae</figcaption>
+        <img src="images/part1cow.png" align="middle" width="400px"/>
+        <figcaption>meshedit/cow.dae</figcaption>
       </td>
     </tr>
   </table>
