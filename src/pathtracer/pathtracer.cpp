@@ -62,7 +62,7 @@ PathTracer::estimate_direct_lighting_hemisphere(const Ray &r,
   // w_out points towards the source of the ray (e.g.,
   // toward the camera if this is a primary ray)
   const Vector3D hit_p = r.o + r.d * isect.t;
-  const Vector3D w_out = w2o * (-r.d);
+  const Vector3D w_out = w2o * (-r.d); // w_r
 
   // This is the same number of total samples as
   // estimate_direct_lighting_importance (outside of delta lights). We keep the
@@ -71,11 +71,22 @@ PathTracer::estimate_direct_lighting_hemisphere(const Ray &r,
   Vector3D L_out;
 
   // TODO (Part 3): Write your sampling loop here
+  for (int i = 0; i < num_samples; i++) {
+      Vector3D wi = hemisphereSampler->get_sample();
+      Vector3D wiw = o2w * wi;
+      Ray r = Ray(wiw * EPS_D + hit_p, wiw);
+      Intersection new_isect;
+
+      if (bvh->intersect(r, &new_isect)) {
+          Vector3D em = new_isect.bsdf->get_emission();
+          Vector3D sample = isect.bsdf->f(w_out, wi) * em * cos_theta(wi) * PI * 2.0;
+          L_out += sample;
+      }
+  }
   // TODO BEFORE YOU BEGIN
-  // UPDATE `est_radiance_global_illumination` to return direct lighting instead of normal shading 
-
-  return Vector3D(1.0);
-
+  // UPDATE `est_radiance_global_illumination` to return direct lighting instead of normal shading
+  L_out = L_out / (1.0 * num_samples);
+  return L_out;
 }
 
 Vector3D
@@ -115,10 +126,11 @@ Vector3D PathTracer::one_bounce_radiance(const Ray &r,
   // TODO: Part 3, Task 3
   // Returns either the direct illumination by hemisphere or importance sampling
   // depending on `direct_hemisphere_sample`
-
-
-  return Vector3D(1.0);
-
+  if (direct_hemisphere_sample) {
+      return estimate_direct_lighting_hemisphere(r, isect);
+  } else {
+      return estimate_direct_lighting_importance(r, isect);
+  }
 
 }
 
@@ -160,8 +172,9 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
 
 
 //  L_out = (isect.t == INF_D) ? debug_shading(r.d) : normal_shading(isect.n);
-L_out = (isect.t == INF_D) ? debug_shading(r.d) : zero_bounce_radiance(r, isect);
+//  L_out = (isect.t == INF_D) ? debug_shading(r.d) : zero_bounce_radiance(r, isect);
   // TODO (Part 3): Return the direct illumination.
+  L_out = zero_bounce_radiance(r, isect) + one_bounce_radiance(r, isect);
 
   // TODO (Part 4): Accumulate the "direct" and "indirect"
   // parts of global illumination into L_out rather than just direct
