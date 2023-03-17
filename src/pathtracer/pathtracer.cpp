@@ -108,9 +108,58 @@ PathTracer::estimate_direct_lighting_importance(const Ray &r,
   const Vector3D w_out = w2o * (-r.d);
   Vector3D L_out;
 
+  // TODO: Part 3, Task 4
+  int num_lights = scene->lights.size();
 
-  return Vector3D(1.0);
+  for (int i = 0; i < num_lights; i++){
+    Vector3D wi;
+    double distToLight;
+    double pdf;
 
+    if (scene->lights[i]->is_delta_light()){
+        Vector3D sample = scene->lights[i]->sample_L(hit_p, &wi, &distToLight, &pdf);
+        Vector3D w_in = w2o * wi;
+
+        if (w_in.z >= 0) {
+            Intersection new_isect;
+            Ray r = Ray(hit_p + EPS_D * wi, wi);
+            r.max_t = distToLight;
+            bool intersected = bvh->intersect(r, &new_isect);
+
+            if (!intersected) {
+                L_out += (sample * cos_theta(w_in) * isect.bsdf->f(w_out, w_in)) / pdf;
+            }
+        }
+    } else {
+        Vector3D sample;
+        int num_samples = ns_area_light;
+        Intersection new_isect;
+
+        for (int j = 0; j < num_samples; j++){
+            Vector3D sample = scene->lights[i]->sample_L(hit_p, &wi, &distToLight, &pdf);
+            Vector3D w_in = w2o * wi;
+
+            if (w_in.z >= 0){
+
+                Ray r = Ray(hit_p + EPS_D * wi, wi);
+                r.max_t = distToLight;
+
+                bool intersected = bvh->intersect(r, &new_isect);
+
+                if (!intersected) {
+                    sample += (sample * cos_theta(w_in) * isect.bsdf->f(w_out, w_in)) / 1.0 * pdf;
+                }
+            }
+
+        }
+//        L_out += runningSample / num_samples * 1.0;
+        L_out += sample * 1.0;
+    }
+
+  }
+
+
+  return L_out;
 }
 
 Vector3D PathTracer::zero_bounce_radiance(const Ray &r,
@@ -145,9 +194,29 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
 
   Vector3D L_out(0, 0, 0);
 
+
   // TODO: Part 4, Task 2
   // Returns the one bounce radiance + radiance from extra bounces at this point.
   // Should be called recursively to simulate extra bounces.
+  L_out = one_bounce_radiance(r, isect);
+  auto russian_roulette = coin_flip(.5)?0.6:0.7;
+  Vector3D w_in;
+  double pdf;
+  Vector3D sample = isect.bsdf->sample_f(w_out, &w_in, &pdf);
+  bool flag = (coin_flip(1 - russian_roulette) && (this->max_ray_depth <= 1 ||
+                                                     r.depth != this->max_ray_depth)) || (r.depth <= 1);
+  if (!flag) {
+      Vector3D world_wi = o2w * w_in;
+      auto ray = Ray((EPS_D * world_wi) + hit_p, world_wi, INF_D, r.depth - 1);
+      Intersection intersec;
+      if (this->bvh->intersect(ray, &intersec)) {
+          Vector3D bounce = this->at_least_one_bounce_radiance(ray, intersec);
+          if (r.depth == this->max_ray_depth)
+              L_out += (w_in.z * sample * bounce) / pdf;
+          else
+              L_out += (w_in.z * sample * bounce) / pdf / russian_roulette;
+      }
+  }
 
 
   return L_out;
@@ -168,15 +237,17 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
   // REMOVE THIS LINE when you are ready to begin Part 3.
   
   if (!bvh->intersect(r, &isect))
-    return envLight ? envLight->sample_dir(r) : L_out;
+    return L_out;
 
 
 //  L_out = (isect.t == INF_D) ? debug_shading(r.d) : normal_shading(isect.n);
-//  L_out = (isect.t == INF_D) ? debug_shading(r.d) : zero_bounce_radiance(r, isect);
+//  L_out = (isect.t == INF_D) ? debug_shading(r.d) : zero_bounce_radiance(r, isect) + one_bounce_radiance(r, isect);
   // TODO (Part 3): Return the direct illumination.
-  L_out = zero_bounce_radiance(r, isect) + one_bounce_radiance(r, isect);
+//  L_out = estimate_direct_lighting_importance(r, isect);
 
+//    L_out = zero_bounce_radiance(r, isect) + one_bounce_radiance(r, isect);
   // TODO (Part 4): Accumulate the "direct" and "indirect"
+  L_out = zero_bounce_radiance(r, isect) + at_least_one_bounce_radiance(r, isect);
   // parts of global illumination into L_out rather than just direct
 
   return L_out;
