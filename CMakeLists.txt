@@ -55,8 +55,7 @@ set(APPLICATION_3_2_SOURCE
     src/pathtracer/sampler.cpp
     src/pathtracer/advanced_bsdf.cpp
     src/scene/environment_light.cpp
-    src/pathtracer/camera_lens.cpp
-    src/pathtracer/raytraced_renderer.cpp
+        src/pathtracer/raytraced_renderer.cpp
 
     # misc
     src/util/sphere_drawing.cpp

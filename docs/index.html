@@ -222,7 +222,36 @@ Compare the results between uniform hemisphere sampling and lighting sampling in
   Walk through both implementations of the direct lighting function.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    The two functions are estimate_direct_lighting_hemisphere and estimate_direct_lighting_importance.
+
+    1) For <i>estimate_direct_lighting_hemisphere</i>, we want to sample the direct lighting at a point by sampling uniformly inside the
+    hemisphere. The big idea is that it takes rays from the camera that shines on the scene and reflects a random ray from the
+    touching point. We then sample the light from that intersection of the ray. If the ray hits a light source, that implies that
+    the point of contact that we chose will be lit up by the light source.
+
+    To implement this, we first calculate the point of contact of the ray from the camera. Then we reverse the direction of the ray
+    since the reversed direction is light to camera direction. Then we loop over the (number of samples * number of lights per sample) that we want to take.
+    For each light in the scene, we take a random sample over the hemisphere, convert that sample into the world space representation,
+    and create a new ray that starts at the point of contact and in the direction where the camera ray intersects with the object.
+    If the ray intersects with the object, then we get the emission of the object and weigh the sample by the bsdf, cosine theta,
+    and its bsdf. Finally, add the result to L_out.
+
+    At the end, to get the average lighting on the point, we divide L_out by the number of samples. Return L_out.
+
+    2) For <i>estimate_direct_lighting_importance</i>, we reverse the rays and sample the rays from the light source that hits
+    the object and bounces into the camera. Doing this will reduce our noise and collect more lights that hit the object and go
+    into the camera.
+
+    To implement this, we first iterate through the number of lights in the scene. For each light that is a delta point light,
+    we get: the hit_p (hit point), pdf, radiance, and distance and direction from the light to the object. Convert that sample into
+    coordinate space. If the z-value is greater than zero, create a ray from hit_p to the light with distance to the light
+    and set the maximum limit of t to the distance to light. If this ray intersects with the object, then hit_p is not considered
+    using the pdf since that means there is something between the light and hit_p. Otherwise, we weight the light by the bsdf,
+    and the cosine. Eventually we divide by the pdf to take into consideration of the distribution. If the light doesn't intersect
+    anything, then it is a direct light and we can add to L_out directly.
+
+    For the area lights, we do this for each of the light samples. Divide by the number of lights per area, and then add the
+    average to L_out. Return L_out.
 </p>
 
 <h3>
@@ -243,23 +272,23 @@ Compare the results between uniform hemisphere sampling and lighting sampling in
     <br>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example1.dae</figcaption>
+        <img src="images/CBbunny_H_16_8.png" align="middle" width="400px"/>
+        <figcaption>hemisphere sampling: result with different rates</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example1.dae</figcaption>
+        <img src="images/CBbunny_H_64_32.png" align="middle" width="400px"/>
+        <figcaption>hemisphere sampling: result with different rates </figcaption>
       </td>
     </tr>
     <br>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example2.dae</figcaption>
+        <img src="images/bunny_64_32.png" align="middle" width="400px"/>
+        <figcaption>importance sampling: result with different rates</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
-        <figcaption>example2.dae</figcaption>
+        <img src="images/dragon_64_32.png" align="middle" width="400px"/>
+        <figcaption>importance sampling: result with different rates</figcaption>
       </td>
     </tr>
     <br>
@@ -275,36 +304,38 @@ Compare the results between uniform hemisphere sampling and lighting sampling in
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="200px"/>
+        <img src="images/spheres_1.png" align="middle" width="200px"/>
         <figcaption>1 Light Ray (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="200px"/>
+        <img src="images/spheres_4.png" align="middle" width="200px"/>
         <figcaption>4 Light Rays (example1.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="200px"/>
+        <img src="images/spheres_16.png" align="middle" width="200px"/>
         <figcaption>16 Light Rays (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="200px"/>
+        <img src="images/spheres_64.png" align="middle" width="200px"/>
         <figcaption>64 Light Rays (example1.dae)</figcaption>
       </td>
     </tr>
   </table>
 </div>
-<p>
-    YOUR EXPLANATION GOES HERE
-</p>
+<!--<p>-->
+<!--    YOUR EXPLANATION GOES HERE-->
+<!--</p>-->
 <br>
 
 <h3>
   Compare the results between uniform hemisphere sampling and lighting sampling in a one-paragraph analysis.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    Uniform hemisphere sampling introduce a lot of noise since we're sampling all the lights in the hemisphere and hope that
+    it will hit the object whereas the importance light sampling weights the importance or the number of samples base on
+    the light distribution of how much the lights will hit.
 </p>
 <br>
 
@@ -321,7 +352,25 @@ You will probably want to use the instructional machines for the above renders i
   Walk through your implementation of the indirect lighting function.
 </h3>
 <p>
-    YOUR RESPONSE GOES HERE
+    The indirect lighting function allows us to include bounced off rays on shadow areas. Since areas that are not light sources
+    also emit and reflect light, the lights in those areas are not in the direct or traces lights that we looked at in Part 3.
+
+    To implement this,  we use a recursive function, which allows us to mimic the ray bounces, without consideration whether
+    they are part of direct illumination. The calculation separates into 2 parts. For zero_bounce_radiance, we only consider
+    emission of the object. For one_bounce_radiance, we return the rays that are in direct sight of the light source.
+
+    In <i>at_least_one_bounce_radiance</i>, we recursively:
+    Figure out hit_p and the ray that hits the object. Then we revrese the direction by flipping the ray's incoming and
+    outgoing directions. We then get the radiance of the one bounce light as well as the intersection. From the current
+    hit_p, we get a sample of a ray on the intersection by sampling the pdf and bsdf. If the max_ray_depth is 0 or 1, then add
+    to one_bounce_radiance. Otherwise, we flip a coin with p = 0.5/0.6/0.7. We check the current ray depth to make sure that
+    there is at least one bounce. Convert the ray into world space, then create a new ray with the direction of the new ray,
+    and one less than the ray given. If the ray intersects with a scene object, then we sample at that point and recursively
+    call at_least_one_bounce_radiance.
+
+    Eventually, we weight by the probability of continuation, the pdf, the bsdf, and the cosine of the ray. Add to L_out.
+
+    Finally, return L_out.
 </p>
 <br>
 
@@ -333,11 +382,11 @@ You will probably want to use the instructional machines for the above renders i
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_1_4.png" align="middle" width="400px"/>
         <figcaption>example1.dae</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_2_4.png" align="middle" width="400px"/>
         <figcaption>example2.dae</figcaption>
       </td>
     </tr>
@@ -353,20 +402,18 @@ You will probably want to use the instructional machines for the above renders i
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_1_4.png" align="middle" width="400px"/>
         <figcaption>Only direct illumination (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_2_4.png" align="middle" width="400px"/>
         <figcaption>Only indirect illumination (example1.dae)</figcaption>
       </td>
     </tr>
   </table>
 </div>
 <br>
-<p>
-    YOUR EXPLANATION GOES HERE
-</p>
+
 <br>
 
 <h3>
@@ -377,36 +424,33 @@ You will probably want to use the instructional machines for the above renders i
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_0.png" align="middle" width="400px"/>
         <figcaption>max_ray_depth = 0 (CBbunny.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_1.png" align="middle" width="400px"/>
         <figcaption>max_ray_depth = 1 (CBbunny.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_2.png" align="middle" width="400px"/>
         <figcaption>max_ray_depth = 2 (CBbunny.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_3.png" align="middle" width="400px"/>
         <figcaption>max_ray_depth = 3 (CBbunny.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_100.png" align="middle" width="400px"/>
         <figcaption>max_ray_depth = 100 (CBbunny.dae)</figcaption>
       </td>
     </tr>
   </table>
 </div>
 <br>
-<p>
-    YOUR EXPLANATION GOES HERE
-</p>
 <br>
 
 <h3>
@@ -417,46 +461,46 @@ You will probably want to use the instructional machines for the above renders i
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_1rate.png" align="middle" width="400px"/>
         <figcaption>1 sample per pixel (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_2rate.png" align="middle" width="400px"/>
         <figcaption>2 samples per pixel (example1.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_4rate.png" align="middle" width="400px"/>
         <figcaption>4 samples per pixel (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_8rate.png" align="middle" width="400px"/>
         <figcaption>8 samples per pixel (example1.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_16rate.png" align="middle" width="400px"/>
         <figcaption>16 samples per pixel (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_64rate.png" align="middle" width="400px"/>
         <figcaption>64 samples per pixel (example1.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/spheres_1024rate.png" align="middle" width="400px"/>
         <figcaption>1024 samples per pixel (example1.dae)</figcaption>
       </td>
     </tr>
   </table>
 </div>
 <br>
-<p>
-    YOUR EXPLANATION GOES HERE
-</p>
+<!--<p>-->
+<!--    YOUR EXPLANATION GOES HERE-->
+<!--</p>-->
 <br>
 
 
@@ -489,21 +533,21 @@ Pick one scene and render it with at least 2048 samples per pixel. Show a good s
   <table style="width:100%">
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_2048.png" align="middle" width="400px"/>
         <figcaption>Rendered image (example1.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_2048_r.png" align="middle" width="400px"/>
         <figcaption>Sample rate image (example1.dae)</figcaption>
       </td>
     </tr>
     <tr align="center">
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_4096.png" align="middle" width="400px"/>
         <figcaption>Rendered image (example2.dae)</figcaption>
       </td>
       <td>
-        <img src="images/your_file.png" align="middle" width="400px"/>
+        <img src="images/bunny_4096_r.png" align="middle" width="400px"/>
         <figcaption>Sample rate image (example2.dae)</figcaption>
       </td>
     </tr>
