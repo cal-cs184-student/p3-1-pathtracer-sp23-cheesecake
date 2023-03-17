@@ -199,22 +199,33 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
   // Returns the one bounce radiance + radiance from extra bounces at this point.
   // Should be called recursively to simulate extra bounces.
   L_out = one_bounce_radiance(r, isect);
-  auto russian_roulette = coin_flip(.5)?0.6:0.7;
-  Vector3D w_in;
+
+  double p = coin_flip(.5) ? 0.6 : 0.7;
   double pdf;
+
+  Vector3D w_in;
+
   Vector3D sample = isect.bsdf->sample_f(w_out, &w_in, &pdf);
-  bool flag = (coin_flip(1 - russian_roulette) && (this->max_ray_depth <= 1 ||
-                                                     r.depth != this->max_ray_depth)) || (r.depth <= 1);
+  bool flag = (r.depth != max_ray_depth || max_ray_depth <= 1) || (r.depth <= 1) && (coin_flip(1 - p));
+
   if (!flag) {
-      Vector3D world_wi = o2w * w_in;
-      auto ray = Ray((EPS_D * world_wi) + hit_p, world_wi, INF_D, r.depth - 1);
-      Intersection intersec;
-      if (this->bvh->intersect(ray, &intersec)) {
-          Vector3D bounce = this->at_least_one_bounce_radiance(ray, intersec);
-          if (r.depth == this->max_ray_depth)
-              L_out += (w_in.z * sample * bounce) / pdf;
-          else
-              L_out += (w_in.z * sample * bounce) / pdf / russian_roulette;
+      Vector3D wwi = o2w * w_in;
+      Intersection isect;
+
+      Ray ray = Ray(hit_p + EPS_D * wwi, wwi, INF_D, r.depth - 1);
+
+      if (bvh->intersect(ray, &isect)) {
+          Vector3D b = at_least_one_bounce_radiance(ray, isect);
+
+          if (r.depth == this->max_ray_depth) {
+              L_out += (b *w_in.z * sample);
+              L_out /= pdf;
+          }
+          else {
+              L_out += (b * w_in.z * sample);
+              L_out /= pdf;
+              L_out /= p;
+          }
       }
   }
 
